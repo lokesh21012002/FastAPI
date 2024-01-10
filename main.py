@@ -109,8 +109,10 @@ def getStudentByID(id: int, db: Session = Depends(get_db)):
             (models.Student.id) == id).first()
 
         if student is None:
-            raise HTTPException(status_code=400, detail=f'The id: {
-                                id} does not exis')
+            raise HTTPException(
+                status_code=400, detail=f'The id: {id} does not exis'
+
+            )
         return student
 
     except Exception as e:
