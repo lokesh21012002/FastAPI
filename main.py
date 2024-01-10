@@ -126,7 +126,7 @@ def getStudentByID(id: int, db: Session = Depends(get_db)):
     # return {"msg": "Not Found", "status": 404}
 
 
-@app.post("/api/v1/student/add/")
+@app.post("/api/v1/student/")
 def addStudent(student: schema.User, db: Session = Depends(get_db)):
 
     # t = student.age
@@ -175,7 +175,7 @@ def addStudent(student: schema.User, db: Session = Depends(get_db)):
         return {"msg": str(e), "status": 400}
 
 
-@app.delete("/api/v1/student/delete/{id}")
+@app.delete("/api/v1/student/{id}")
 def deleteStuent(id: int, db: Session = Depends(get_db)):
     # for i in db:
     #     if str(i.id) == id:
@@ -194,12 +194,12 @@ def deleteStuent(id: int, db: Session = Depends(get_db)):
                                 detail=f"The id: {id} you requested for does not exist")
         deleted_student.delete(synchronize_session=False)
         db.commit()
-        return {"msg": "Student deleted sucessfully", "status": 200}
+        return {"msg": "Student deleted sucessfully", "status": 204}
     except Exception as e:
         return {"msg": str(e), "status": 404}
 
 
-@app.put("/api/v1/student/update/{id}")
+@app.put("/api/v1/student/{id}")
 def updateStudent(user: schema.User, id: int, db: Session = Depends(get_db)):
     # for i in db:
     #     if str(i.id) == id:
@@ -229,7 +229,7 @@ def updateStudent(user: schema.User, id: int, db: Session = Depends(get_db)):
     # return {"msg": "Not Found", "staus": 404}
 
 
-@app.patch("/api/v1/student/update_full/{id}")
+@app.patch("/api/v1/student/{id}")
 def partialStudentUpdate(id: int, user: UpdateUser, db: Session = Depends(get_db)):
 
     try:
