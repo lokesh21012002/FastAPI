@@ -1,12 +1,13 @@
 from fastapi import FastAPI, Path, HTTPException, Depends
-
+from datetime import date
+from dateutil.relativedelta import relativedelta
 from typing import Optional, List
 from uuid import uuid4, UUID
 from starlette import status
 
 from pydantic import BaseModel
 
-from schema import User, Gender, Role, UpdateUser
+from schema import User, Gender, Role, UpdateUser, ResponseEntity
 
 from database import get_db
 
@@ -57,7 +58,7 @@ Base.metadata.create_all(database.engine)
 
 # class Student(BaseModel):
 #     name: str
-#     age: int
+#     dob: int
 #     courses: list
 
 
@@ -66,13 +67,13 @@ Base.metadata.create_all(database.engine)
 
 #     1: {
 #         "name": "John Doe",
-#         "age": 30,
+#         "dob": 30,
 #         "courses": ["Math", "Physics"]
 
 #     },
 #     2: {
 #         "name": "Jane Smith",
-#         "age": 25,
+#         "dob": 25,
 #         "courses": ["Computer Science", "Chemistry"]
 
 #     }
@@ -89,13 +90,22 @@ def index():
     return {"msg": "hello world"}
 
 
+def current_dob(dob: date):
+    age = relativedelta(date.today(), dob).years
+    return age
+
+
 @app.get('/api/v1/students')
 def getAllStudents(db: Session = Depends(get_db)):
 
     try:
         # return db
         students = db.query(models.Student).all()
-        return students
+        response = []
+        for i in students:
+            response.append(ResponseEntity(
+                i.id, i.name, current_dob(i.dob), i.role))
+        return response
     except Exception as e:
         return {"msg": str(e), "status": 400}
 
@@ -113,7 +123,7 @@ def getStudentByID(id: int, db: Session = Depends(get_db)):
                 status_code=400, detail=f'The id: {id} does not exis'
 
             )
-        return student
+        return ResponseEntity(id, student.name, current_dob(student.dob), student.role)
 
     except Exception as e:
         return {"msg": str(e), "status": 400}
@@ -148,7 +158,8 @@ def addStudent(student: schema.User, db: Session = Depends(get_db)):
     try:
         # return {"msg": student.id}
         id = student.id
-        if type(student.age) != int or student.age < 0:
+        age = current_dob(student.dob)
+        if type(student.dob) != date or age <= 0 or age >= 50:
             raise ValueError("Invalid Age")
             # raise Exception("Invalid age")
             # return {"age": "error"}
@@ -170,8 +181,10 @@ def addStudent(student: schema.User, db: Session = Depends(get_db)):
         db.add(new_sudent)
         db.commit()
         db.refresh(new_sudent)
+        response_entity = ResponseEntity(
+            new_sudent.id, new_sudent.name, current_dob(new_sudent.dob), new_sudent.role)
 
-        return [new_sudent]
+        return [response_entity]
 
     except Exception as e:
         return {"msg": str(e), "status": 400}
@@ -223,8 +236,9 @@ def updateStudent(user: schema.User, id: int, db: Session = Depends(get_db)):
                                 detail=f"The id:{id} does not exist")
         updated_student.update(user.dict(), synchronize_session=False)
         db.commit()
+        updated_student_db = updated_student.first()
 
-        return updated_student.first()
+        return ResponseEntity(updated_student_db.id, updated_student_db.name, current_age(updated_student_db.dob), updated_student_db.role)
     except Exception as e:
         return {"msg": str(e), "status": 400}
 
@@ -247,8 +261,8 @@ def partialStudentUpdate(id: int, user: UpdateUser, db: Session = Depends(get_db
         if student_data.get("name") is not None:
             db_student.name = student_data.get("name")
 
-        if student_data.get("age") is not None:
-            db_student.age = student_data.get("age")
+        if student_data.get("dob") is not None:
+            db_student.dob = student_data.get("dob")
 
         if student_data.get("role") is not None:
             db_student.role = student_data.get('role')
@@ -256,8 +270,10 @@ def partialStudentUpdate(id: int, user: UpdateUser, db: Session = Depends(get_db
         db.add(db_student)
         db.commit()
         db.refresh(db_student)
+        response_student = ResponseEntity(
+            db_student.id, db_student.name, current_dob(db_student.dob), db_student.role)
 
-        return db_student
+        return response_student
 
     except Exception as e:
         return {"msg": str(e), "status": 400}
